@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+<input type="file" onchange="readFile(this)">
+<button type="button" id="calc">Calculate `</button>
+<script src="https://code.jquery.com/jquery-3.6.4.slim.js" integrity="sha256-dWvV84T6BhzO4vG6gWhsWVKVoa4lVmLnpBOZh/CAHU4=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+	var textReceive = '';
+	var orderCrypto = [];
+	
+	function readFile(input) {
+	  let file = input.files[0];
+
+	  let reader = new FileReader();
+
+	  reader.readAsText(file);
+
+	  reader.onload = function() {
+	    //console.log(reader.result);
+
+	    textReceive = reader.result;
+	  };
+
+	  reader.onerror = function() {
+	    console.log(reader.error);
+	  };
+	}
+
+	async function extractData() {
+
+		
+
+		var extrData = textReceive.replaceAll("\n","");
+
+		extrData = extrData.split("\r");
+
+		//console.log(extrData);
+
+		for(const line_ of extrData) {
+
+			var prepareData = line_.split(" ");
+
+				if(!orderCrypto[prepareData[1]]) {
+						orderCrypto[prepareData[1]] = {"B":[],"S":[]};
+				}
+
+				var orderLoad = [Number(prepareData[2]),Number(prepareData[3])];
+
+				orderCrypto[prepareData[1]][prepareData[0]].push(orderLoad);
+			
+		}
+		
+	}
+
+	async function checkQuantity(s,b) {
+		if(s > b) {
+			return b;
+		} else {
+			return s;
+		}
+	}
+
+	async function sumQuantity(s,b) {
+		if(s > b) {
+			return s - b;
+		} else {
+			return 0;
+		}
+	}
+
+	async function calculateData() {
+
+		var profitSummary = 0.00;
+		var lossSummary = 0.00;
+
+		for (const [key, value] of Object.entries(orderCrypto)) {
+
+			for(const sell of orderCrypto[key]["S"]) {
+
+				var jc = 0;
+
+				var sell_temp = sell[1];
+
+				console.log("Sell : " + sell_temp);
+
+				for(const buy of orderCrypto[key]["B"]) {
+
+					if(sell[1] == 0) {
+						continue;
+					}
+
+
+					if(buy[1] > 0) {
+
+
+
+						// PROFIT DETECT //
+						if(sell[0] > buy[0]) {
+
+							profitSummary += (sell[0] - buy[0]) * await checkQuantity(sell[1],buy[1]);
+
+						} else {
+
+							lossSummary += (buy[0] - sell[0]) * await checkQuantity(sell[1],buy[1]);
+
+						}
+
+
+
+						if(sell[1] - buy[1] > 0) {
+							//console.log("--- more ---");
+							//console.log(orderCrypto[key]["B"][jc]);
+							sell[1] = await sumQuantity(sell[1],buy[1]);
+							orderCrypto[key]["B"][jc][1] = 0;
+						
+						} else {
+							//console.log("--- less ---");
+							sell[1] = await sumQuantity(sell[1],buy[1]);
+							orderCrypto[key]["B"][jc][1] = buy[1] - sell[1];
+						}
+
+
+						
+						//console.log(sell[1] - buy[1] + " | Sell : " + sell[1] + " : BUY " + buy[1])
+
+						
+						console.log("P  " + sell[0] + " | Q " + sell[1]);
+
+						jc++;
+
+					} 
+
+
+
+					//await console.log(orderCrypto);
+
+				}
+
+								console.log("Sell Temp : " + sell[1] + " ^ " + sell_temp);
+
+				if(sell_temp - sell[1] > 0) {
+					console.log("Error Not enough quantity");
+					continue;
+				} else {
+					//console.log("Loop");
+				}
+
+
+			}
+
+		}
+
+		orderCrypto = [];
+
+		console.log("PROFIT " + profitSummary);
+		console.log("LOSS " + lossSummary);
+		alert("RESULT : " + (profitSummary - lossSummary).toFixed(2));
+	}
+
+	$('#calc').on('click',async function(e) {
+
+		await extractData();
+
+		await calculateData();
+
+	})
+
+</script>
+</body>
+</html>
