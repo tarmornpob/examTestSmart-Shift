@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+<input type="file" onchange="readFile(this)">
+<button type="button" id="calc">Calculate `</button>
+<script src="https://code.jquery.com/jquery-3.6.4.slim.js" integrity="sha256-dWvV84T6BhzO4vG6gWhsWVKVoa4lVmLnpBOZh/CAHU4=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+	var textReceive = '';
+	var orderCrypto = [];
+	var resultData = 0.00;
+
+	function readFile(input) {
+	  let file = input.files[0];
+
+	  let reader = new FileReader();
+
+	  reader.readAsText(file);
+
+	  reader.onload = function(callback) {
+	    textReceive = reader.result;
+	  };
+
+	  reader.onerror = function() {
+	    console.log(reader.error);
+	  };
+	}
+
+	async function checkRemain(sellarr,buyarr) {
+
+		var sellRemain = sellarr.find(element => element[1] > 0);
+		var buyRemain = buyarr.find(element => element[1] > 0);
+
+		if(typeof buyRemain === "undefined" && sellRemain) {
+			console.log("Quantity not enough for sell");
+			return false;
+		}
+	}
+
+	async function extractData() {
+
+		orderCrypto = [];
+		const tempData_ = await (textReceive.replaceAll("\r","")).split("\n");
+
+		for(const t of tempData_) {
+			let tempIn_ = t.split(" ");
+
+			if(!orderCrypto[tempIn_[1]]) {
+
+				orderCrypto[tempIn_[1]] = {"B":[],"S":[]}
+				
+			}
+
+			orderCrypto[tempIn_[1]][tempIn_[0]].push([(+tempIn_[2]),(+tempIn_[3])]);
+		}
+
+	}
+
+	async function calculateData() {
+
+		resultData = 0.00;
+	
+		for(const [key,symbol] of Object.entries(orderCrypto)) {
+
+			for(const seller of orderCrypto[key]["S"]) {
+
+				for(const buyer of orderCrypto[key]["B"]) {
+
+					if(buyer[1] < seller[1]) {
+
+						resultData += (seller[0] -  buyer[0])*buyer[1];
+
+						seller[1] -= buyer[1];
+						buyer[1] = 0;
+
+					} else {
+
+						resultData += (seller[0] - buyer[0])*seller[1];
+
+						buyer[1] -= seller[1];
+						seller[1] = 0;
+					}
+
+					await checkRemain(orderCrypto[key]["S"],orderCrypto[key]["B"]);
+				}
+
+			}
+		}
+	}
+
+	$('#calc').on('click',async function(e) {
+
+		await extractData();
+		await calculateData();
+		console.log(resultData.toFixed(2));
+
+	});
+
+</script>
+</body>
+</html>
